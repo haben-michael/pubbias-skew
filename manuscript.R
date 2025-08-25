@@ -167,7 +167,7 @@ plot.fprs(ns,fprs,param.name="order of $m_i$",param.levels=c("$O(1)$","$O(n)$","
 
 
 
-## Simulaiton. Misspecified model--log-odds--effect of mu = average
+## Simulation. Misspecified model--log-odds--effect of mu = average
 ## log odds.
 set.seed(1)
 source('utils.R')

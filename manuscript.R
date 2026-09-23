@@ -80,15 +80,17 @@ fpr.sim <- function(dgp,ns,n.to.B,alpha) {
         p.vals <- replicate(B, {
             study.data <- dgp(n)
             y <- study.data$y; v <- study.data$v
-            c(Egger=egger.test(y=y,v=v)$p.value,
-              skew=skew.test(y=y,v=v)$p.value)
+            out <- c(Egger=egger.test(y=y,v=v)$p.value,
+                     skew=skew.test(y=y,v=v)$p.value)
+            if(any(is.na(out)))browser()
+            out
         })
         rowMeans(p.vals<=alpha)
     })
     fprs <- simplify2array(fprs)
     return(fprs)
 }
-plot.fprs <- function(ns,fprs,param.name,param.levels,file.name=NULL,smooth=FALSE) {
+plot.fprs <- function(ns,fprs,param.name,param.levels,legend.loc='bottomright',file.name=NULL,smooth=FALSE) {
     if(!is.null(file.name)) {
         tikzDevice::tikz(file.name, width = 6.5, height = 3)        
     }
@@ -97,9 +99,10 @@ plot.fprs <- function(ns,fprs,param.name,param.levels,file.name=NULL,smooth=FALS
         fpr.test <- sapply(fprs,function(mat)mat[test.name,])
         vals <- abs(fpr.test-alpha)
         if(smooth)vals <- apply(vals,2,function(y)predict(loess(y~ns)))
-        matplot(ns,vals,pch=1,col=1,type='l',xlab='number of studies',ylab="$|$observed - nominal FPR$|$", main=paste(test.name,'test'))
+        matplot(ns,vals,pch=1,col=1,type='l',xlab='number of studies',ylab="observed FPR", main=paste(test.name,'test'))
+        abline(h=alpha)
     }
-    legend('topright',lty=1:length(param.levels),legend=param.levels,title=param.name,cex=.8)
+    legend(legend.loc,lty=1:length(param.levels),legend=param.levels,title=param.name,cex=.8)
     par(op)
     if(!is.null(file.name)) dev.off()
 }
@@ -115,7 +118,7 @@ plot.fprs <- function(ns,fprs,param.name,param.levels,file.name=NULL,smooth=FALS
 set.seed(1)
 ns <- 5:100
 alpha <- .1
-n.to.B <- function(n)n^2
+n.to.B <- function(n)round(n^2.2)
 skew.levels <- c(a=1,b=2,c=3)
 mu <- 0
 sigma.to.skew <- function(sigma)(exp(sigma^2)+2)*sqrt(exp(sigma^2)-1)
@@ -139,13 +142,13 @@ set.seed(1)
 source('utils.R')
 ns <- 5:100
 alpha <- .1
-n.to.B <- function(n)1e3
+n.to.B <- function(n)1.5e3
 skew.level <- 1
 sigma.to.skew <- function(sigma)(exp(sigma^2)+2)*sqrt(exp(sigma^2)-1)
 sigma <- uniroot(function(sigma)sigma.to.skew(sigma)-skew.level,c(0,10))$root
 rW <- function(m)exp(rnorm(m,0,sd=sigma))
-n.to.ms <- list(function(n)rpois(n,lambda=rep(20,n)),function(n)2+rpois(n,lambda=rep(n,n)),function(n)2+rpois(n,rep(n^2,n)))
-n.to.ms <- rev(n.to.ms)
+n.to.ms <- list(function(n)rpois(n,lambda=rep(20,n)),function(n)rpois(n,lambda=rep(n,n)),function(n)rpois(n,rep(n^2,n)))
+n.to.ms <- n.to.ms
 start <- Sys.time()
 fprs <- lapply(n.to.ms, function(n.to.m) {
     dgp <- function(n) {
@@ -157,7 +160,7 @@ fprs <- lapply(n.to.ms, function(n.to.m) {
     }
     fpr.sim(dgp,ns,n.to.B,alpha)
 })
-save.image('250817c.RData')
+## save.image('250817c.RData')
 file.name <- './figs/misspecified-smd.tex'
 print(Sys.time()-start)
 plot.fprs(ns,fprs,param.name="order of $m_i$",param.levels=c("$O(1)$","$O(n)$","$O(n^2)$"),file.name=file.name,smooth=TRUE)

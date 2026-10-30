@@ -28,6 +28,7 @@ if(!is.null(file.name))dev.off()
 
 
 ## Simulation. Gaussian model.
+
 set.seed(1)
 source('utils.R')
 rZ <- rnorm #1
@@ -53,7 +54,7 @@ p.vals.skew <- sapply(p.vals,function(x)x['skew',])
 by.test <- list(Egger=p.vals.egger,skew=p.vals.skew)
 
 file.name <- NULL
-file.name <- './figs/gaussian.tex'
+## file.name <- './figs/gaussian.tex'
 if(!is.null(file.name))tikzDevice::tikz(file.name, width = 6.5, height = 3)        
 edgeworth <- list('Egger'=function(q,n)pnorm(q) - dnorm(q)*1/4*(q^3+q)/n, 'skew'=function(q,n)pnorm(q) - dnorm(q)*(-9*q/2/n +5/6/n*(q^3-3*q) )  )
 op <- par(mfrow=c(1,2))
@@ -62,7 +63,7 @@ for(test.name in names(by.test)) {
     fpr <- sapply(p.vals.test, function(x)mean(x<alpha))
     cdf.ew <- edgeworth[[test.name]]
     fpr.error.ew <- function(n)abs(cdf.ew(qnorm(alpha/2),n) + 1-cdf.ew(qnorm(1-alpha/2),n) - alpha)
-    plot(ns,abs(fpr-alpha),xlab='number of studies',ylab=paste0('$|$observed - nominal FPR$|$'),main=paste0(test.name,' test'),cex=1/2)
+    plot(ns,(fpr),xlab='number of studies',ylab=paste0('$|$observed - nominal FPR$|$'),main=paste0(test.name,' test'),cex=1/2)
     curve(fpr.error.ew,add=TRUE)
 }
 par(op)
@@ -70,8 +71,7 @@ if(!is.null(file.name))dev.off()
 
 
 
-
-## Common simulation and plotting code for remaining simulations.
+## FPR simulation code common to the remaining simulations
 
 fpr.sim <- function(dgp,ns,n.to.B,alpha) {
     fprs <- lapply(ns, FUN=function(n) {
@@ -80,52 +80,16 @@ fpr.sim <- function(dgp,ns,n.to.B,alpha) {
         p.vals <- replicate(B, {
             study.data <- dgp(n)
             y <- study.data$y; v <- study.data$v
-<<<<<<< HEAD
             out <- c(Egger=egger.test(y=y,v=v)$p.value,
                      skew=skew.test(y=y,v=v)$p.value)
             if(any(is.na(out)))browser()
             out
-=======
-            c(Egger=egger.test(y=y,v=v)$p.value,
-              skew=skew.test(y=y,v=v)$p.value)
->>>>>>> 088ad366f5d10c2b6c42a7d61bf364075221d521
         })
         rowMeans(p.vals<=alpha)
     })
     fprs <- simplify2array(fprs)
     return(fprs)
 }
-<<<<<<< HEAD
-plot.fprs <- function(ns,fprs,param.name,param.levels,legend.loc='bottomright',file.name=NULL,smooth=FALSE) {
-=======
-plot.fprs <- function(ns,fprs,param.name,param.levels,file.name=NULL,smooth=FALSE) {
->>>>>>> 088ad366f5d10c2b6c42a7d61bf364075221d521
-    if(!is.null(file.name)) {
-        tikzDevice::tikz(file.name, width = 6.5, height = 3)        
-    }
-    op <- par(mfrow=c(1,2),  mar = c(4, 4, 3, 1), mgp = c(2.2, 1, 0))
-    for(test.name in c("Egger","skew")) {
-        fpr.test <- sapply(fprs,function(mat)mat[test.name,])
-        vals <- abs(fpr.test-alpha)
-        if(smooth)vals <- apply(vals,2,function(y)predict(loess(y~ns)))
-<<<<<<< HEAD
-        matplot(ns,vals,pch=1,col=1,type='l',xlab='number of studies',ylab="observed FPR", main=paste(test.name,'test'))
-        abline(h=alpha)
-    }
-    legend(legend.loc,lty=1:length(param.levels),legend=param.levels,title=param.name,cex=.8)
-=======
-        matplot(ns,vals,pch=1,col=1,type='l',xlab='number of studies',ylab="$|$observed - nominal FPR$|$", main=paste(test.name,'test'))
-    }
-    legend('topright',lty=1:length(param.levels),legend=param.levels,title=param.name,cex=.8)
->>>>>>> 088ad366f5d10c2b6c42a7d61bf364075221d521
-    par(op)
-    if(!is.null(file.name)) dev.off()
-}
-
-
-
-
-
 
 
 ## Simulation. Moment model.
@@ -133,50 +97,44 @@ plot.fprs <- function(ns,fprs,param.name,param.levels,file.name=NULL,smooth=FALS
 set.seed(1)
 ns <- 5:100
 alpha <- .1
-<<<<<<< HEAD
 n.to.B <- function(n)round(n^2.2)
-=======
-n.to.B <- function(n)n^2
->>>>>>> 088ad366f5d10c2b6c42a7d61bf364075221d521
 skew.levels <- c(a=1,b=2,c=3)
 mu <- 0
 sigma.to.skew <- function(sigma)(exp(sigma^2)+2)*sqrt(exp(sigma^2)-1)
 params <- sigmas <- sapply(skew.levels, function(skew.level) uniroot(function(sigma)sigma.to.skew(sigma)-skew.level,c(0,10))$root)
 fprs <- lapply(sigmas, function(sigma) {
     dgp <- function(n) {
-        ms <- rpois(n,lambda=20)
+        ms <- rpois(n,lambda=20)+1
         y <- sapply(ms, function(m) mean(exp(rnorm(m,mean=0,sd=sigma))))
         v <- sqrt((exp(sigma^2)-1)*exp(2*mu+sigma^2)) / ms
         return(list(y=y,v=v))
     }
     fpr.sim(dgp,ns,n.to.B,alpha)
 })
-file.name <- './figs/moment.tex'
-plot.fprs(ns,fprs,param.name="skew",param.levels=skew.levels,file.name=file.name,smooth=TRUE)
+## file.name <- './figs/moment.tex'
+file.name <- NULL
+plot.fprs(ns,fprs,param.name="skew",param.levels=skew.levels,legend.loc='topleft',file.name=file.name,smooth=TRUE)
+
+
+
+
+
 
 
 
 ## Simulation. Misspecified model--SMDs.
+
 set.seed(1)
 source('utils.R')
 ns <- 5:100
 alpha <- .1
-<<<<<<< HEAD
 n.to.B <- function(n)1.5e3
-=======
-n.to.B <- function(n)1e3
->>>>>>> 088ad366f5d10c2b6c42a7d61bf364075221d521
 skew.level <- 1
 sigma.to.skew <- function(sigma)(exp(sigma^2)+2)*sqrt(exp(sigma^2)-1)
 sigma <- uniroot(function(sigma)sigma.to.skew(sigma)-skew.level,c(0,10))$root
 rW <- function(m)exp(rnorm(m,0,sd=sigma))
-<<<<<<< HEAD
 n.to.ms <- list(function(n)rpois(n,lambda=rep(20,n)),function(n)rpois(n,lambda=rep(n,n)),function(n)rpois(n,rep(n^2,n)))
 n.to.ms <- n.to.ms
-=======
-n.to.ms <- list(function(n)rpois(n,lambda=rep(20,n)),function(n)2+rpois(n,lambda=rep(n,n)),function(n)2+rpois(n,rep(n^2,n)))
-n.to.ms <- rev(n.to.ms)
->>>>>>> 088ad366f5d10c2b6c42a7d61bf364075221d521
 start <- Sys.time()
 fprs <- lapply(n.to.ms, function(n.to.m) {
     dgp <- function(n) {
@@ -188,27 +146,20 @@ fprs <- lapply(n.to.ms, function(n.to.m) {
     }
     fpr.sim(dgp,ns,n.to.B,alpha)
 })
-<<<<<<< HEAD
-## save.image('250817c.RData')
-=======
-save.image('250817c.RData')
->>>>>>> 088ad366f5d10c2b6c42a7d61bf364075221d521
 file.name <- './figs/misspecified-smd.tex'
 print(Sys.time()-start)
 plot.fprs(ns,fprs,param.name="order of $m_i$",param.levels=c("$O(1)$","$O(n)$","$O(n^2)$"),file.name=file.name,smooth=TRUE)
 
 
 
-
-
-
 ## Simulation. Misspecified model--log-odds--effect of mu = average
 ## log odds.
+
 set.seed(1)
 source('utils.R')
 ns <- 20:100
 alpha <- .1
-n.to.B <- function(n)1e3
+n.to.B <- function(n)5e2
 n.to.m <- function(n)rep(n^2,n)
 delta <- .05
 mus <- seq(0,.1,len=3)
@@ -222,16 +173,16 @@ fprs <- lapply(mus, function(mu) {
         pi1.hats <- rbinom(n,ms,pi1)/ms
         pi2.hats <- rbinom(n,ms,pi2)/ms
         y <- log(pi1.hats/(1-pi1.hats)) - log(pi2.hats/(1-pi2.hats))
-        v <- ( 1/pi1.hats + 1/(1-pi1.hats) + 1/(pi2.hats) + 1/(1-pi2.hats) )/ms
+        v <- (  1/pi1.hats + 1/(1-pi1.hats) + 1/(pi2.hats) + 1/(1-pi2.hats) )/ ms
         if(any(is.infinite(y)))browser()
         return(list(y=y,v=v))
     }
     fpr.sim(dgp,ns,n.to.B,alpha)
 })
-file.name <- './figs/misspecified-logodds-mu.tex'
-## file.name <- NULL
+## file.name <- './figs/misspecified-logodds-mu.tex'
+file.name <- NULL
 print(Sys.time()-start)
-plot.fprs(ns,fprs,param.name="$\\mu$",param.levels=round(mus,2),file.name=file.name,smooth=TRUE)
+plot.fprs(ns,fprs,param.name="$\\mu$",param.levels=round(mus,2),legend.loc='topright',file.name=file.name,smooth=TRUE)
 
 
 
@@ -239,4 +190,52 @@ plot.fprs(ns,fprs,param.name="$\\mu$",param.levels=round(mus,2),file.name=file.n
 
 
 
+
+## Main simulation 
+
+require(lattice)
+source('utils.R')
+set.seed(1)
+ns <- round(seq(20,1e2,len=10))
+ns <- c(10,20,1e2)
+alpha <- .1
+tau2.factors <- c(.2,1.5)
+sdlog <- 0.6
+deltas <- log(c(.2,.5,1))
+n.to.B <- function(n)1e4
+n.to.ms <- list(n0=function(n)round(rep(20,n)),n1=function(n)round(rep(n^1,n)),n2=function(n)round(rep(n^2,n)))
+params <- expand.grid(delta=seq_along(deltas),m=seq_along(n.to.ms),tau2.factor=seq_along(tau2.factors))
+start <- Sys.time()
+fprs <- apply(params, 1, simplify=FALSE, FUN=function(param) {
+    n.to.m <- n.to.ms[[param['m']]]
+    delta <- deltas[param['delta']]
+    tau2.factor <- tau2.factors[param['tau2.factor']]
+    dgp <- function(n) {
+        p.c <- p.c.fe <- runif(n,.3,.7)
+        p.t.fe <- plogis(delta + qlogis(p.c.fe))
+        ms <- n.to.m(n)
+        ms <- round( rlnorm(n,meanlog=log(ms),sdlog=sdlog) )
+        v.fe <- 1/(ms*p.c.fe*(1-p.c.fe)) + 1/(ms*p.t.fe*(1-p.t.fe))
+        tau2 <- tau2.factor*mean(v.fe)
+        delta.re <- delta+rnorm(n)*sqrt(tau2)
+        p.t <- plogis(delta.re + qlogis(p.c))
+        cells <- data.frame(y.1.c=rbinom(n,ms,p.c), y.1.t=rbinom(n,ms,p.t))
+        cells <- within(cells, {
+            y.0.t <- ms-y.1.t;
+            y.0.c <- ms-y.1.c
+        })
+        idx.cc <- apply(cells,1,function(v)any(v==0L))
+        cells[idx.cc,] <- cells[idx.cc,]+.5
+        ## OR
+        y <- with(cells, log(y.1.t/y.0.t) - log(y.1.c/y.0.c))
+        v <- with(cells, 1/y.1.t + 1/y.0.t + 1/y.1.c + 1/y.0.c)
+        ## RR
+        ## y <- with(cells, log(y.1.t/y.1.c))
+        ## v <- with(cells, ms/y.1.t + ms/y.1.c - 2)
+        return(list(y=y,v=v))
+    }
+    by.n <- fpr.sim(dgp,ns,n.to.B,alpha)
+    out <- cbind(n=ns,m=param['m'],t(by.n),delta=param['delta'],tau2.factor=param['tau2.factor'])
+})
+print(Sys.time()-start)
 
